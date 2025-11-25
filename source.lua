@@ -1,13 +1,13 @@
 --[[ 
     Rayfield Interface Suite (Optimized Standalone Library)
     -------------------------------------------------------
-    - LAYOUT: Restored "Rayfield" Style (Horizontal Tabs).
-    - FIXED: Buttons use Manual Positioning (No Glitches).
-    - ADDED: Termination Confirmation Modal.
-    - CONTENT: Library ONLY.
+    - TARGET: Library Source Code ONLY.
+    - LAYOUT: Exact Rayfield Replica (Horizontal Tabs, Dark Theme).
+    - FIXED: Buttons use Manual Positioning to prevent overlapping/glitching.
+    - ADDED: Termination Confirmation Modal on Close.
     
     USAGE:
-    local Library = loadstring(readfile("rayfield_lib.lua"))()
+    local Library = loadstring(readfile("rayfield_optimized.lua"))()
     local Window = Library:CreateWindow({Name = "Script Name"})
 ]]
 
@@ -18,21 +18,29 @@ local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
 local TextService = game:GetService("TextService")
 
---// THEME (Rayfield Dark Style)
+--// THEME
 local Theme = {
     Background = Color3.fromRGB(25, 25, 25),
-    Topbar = Color3.fromRGB(25, 25, 25), -- Blends with BG
+    Topbar = Color3.fromRGB(25, 25, 25), -- Seamless with background
     TabContainer = Color3.fromRGB(35, 35, 35),
     ElementBackground = Color3.fromRGB(32, 32, 32),
     TextColor = Color3.fromRGB(240, 240, 240),
     PlaceholderColor = Color3.fromRGB(150, 150, 150),
-    Accent = Color3.fromRGB(60, 140, 255), -- Blue Accent
+    Accent = Color3.fromRGB(60, 140, 255), -- Default Blue Accent
     NotificationBG = Color3.fromRGB(20, 20, 20),
     Stroke = Color3.fromRGB(50, 50, 50),
     Crimson = Color3.fromRGB(255, 65, 65)
 }
 
---// UTILS
+--// ICONS (Roblox Asset IDs)
+local Icons = {
+    Search = "rbxassetid://3944680069",
+    Close = "rbxassetid://3944676352",
+    Minimize = "rbxassetid://3944652232",
+    Settings = "rbxassetid://3944672058"
+}
+
+--// UTILITY FUNCTIONS
 local function GetUIContainer()
     if gethui then return gethui() end
     if Synapse and Synapse.ProtectGui then 
@@ -52,7 +60,7 @@ local function Tween(obj, props, time)
     TweenService:Create(obj, info, props):Play()
 end
 
---// MAIN
+--// LIBRARY MAIN
 function Library:CreateWindow(Settings)
     local Window = {}
     local Minimized = false
@@ -75,10 +83,10 @@ function Library:CreateWindow(Settings)
     Main.ClipsDescendants = true
     
     local MainCorner = Instance.new("UICorner")
-    MainCorner.CornerRadius = UDim.new(0, 12) -- Rayfield Style Rounding
+    MainCorner.CornerRadius = UDim.new(0, 12)
     MainCorner.Parent = Main
 
-    -- Dragging
+    -- Dragging Logic
     local dragging, dragInput, dragStart, startPos
     Main.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -96,13 +104,15 @@ function Library:CreateWindow(Settings)
         end
     end)
 
-    -- Topbar
+    --// TOPBAR
     local Topbar = Instance.new("Frame")
+    Topbar.Name = "Topbar"
     Topbar.Parent = Main
     Topbar.BackgroundTransparency = 1
     Topbar.Size = UDim2.new(1, 0, 0, 50)
     
     local Title = Instance.new("TextLabel")
+    Title.Name = "Title"
     Title.Parent = Topbar
     Title.Text = Settings.Name or "Rayfield"
     Title.Font = Enum.Font.GothamBold
@@ -113,50 +123,48 @@ function Library:CreateWindow(Settings)
     Title.Size = UDim2.new(0.5, 0, 1, 0)
     Title.TextXAlignment = Enum.TextXAlignment.Left
 
-    --// BUTTONS (Manual Positioning - No Layouts)
+    --// CONTROL BUTTONS (Manual Positioning - No Layouts to prevent glitches)
     local ButtonContainer = Instance.new("Frame")
+    ButtonContainer.Name = "Buttons"
     ButtonContainer.Parent = Topbar
     ButtonContainer.BackgroundTransparency = 1
-    ButtonContainer.Position = UDim2.new(1, -125, 0, 0) -- Adjusted for Rayfield padding
+    ButtonContainer.Position = UDim2.new(1, -125, 0, 0) 
     ButtonContainer.Size = UDim2.new(0, 120, 1, 0)
 
-    local function CreateTopButton(Name, Symbol, Order, Callback)
-        local Btn = Instance.new("TextButton")
+    local function CreateTopButton(Name, Icon, Order, Callback)
+        local Btn = Instance.new("ImageButton")
         Btn.Name = Name
         Btn.Parent = ButtonContainer
         Btn.BackgroundTransparency = 1
-        -- Manual Positioning: Pushes from Right to Left
-        -- Order 1 = Rightmost, Order 2 = Middle, Order 3 = Left
-        Btn.Position = UDim2.new(1, -35 * Order, 0, 10) 
-        Btn.Size = UDim2.new(0, 30, 0, 30)
-        Btn.Text = Symbol
-        Btn.Font = Enum.Font.GothamBold
-        Btn.TextSize = 18
-        Btn.TextColor3 = Color3.fromRGB(150, 150, 150)
+        -- Manual Positioning: Pushes from Right to Left (Order 1 = Far Right)
+        Btn.Position = UDim2.new(1, -35 * Order, 0.5, -10) 
+        Btn.Size = UDim2.new(0, 20, 0, 20)
+        Btn.Image = Icon
+        Btn.ImageColor3 = Color3.fromRGB(150, 150, 150)
         
-        Btn.MouseEnter:Connect(function() Tween(Btn, {TextColor3 = Color3.new(1,1,1)}) end)
-        Btn.MouseLeave:Connect(function() Tween(Btn, {TextColor3 = Color3.fromRGB(150,150,150)}) end)
+        Btn.MouseEnter:Connect(function() Tween(Btn, {ImageColor3 = Color3.new(1,1,1)}) end)
+        Btn.MouseLeave:Connect(function() Tween(Btn, {ImageColor3 = Color3.fromRGB(150,150,150)}) end)
         Btn.MouseButton1Click:Connect(Callback)
     end
 
-    -- Close (X) - Order 1 (Far Right)
-    CreateTopButton("Close", "X", 1, function()
-        -- Confirmation Modal
+    -- Close (Order 1: Far Right)
+    CreateTopButton("Close", Icons.Close, 1, function()
+        -- TERMINATION MODAL
         local Overlay = Instance.new("TextButton")
-        Overlay.Name = "Overlay"
+        Overlay.Name = "ModalOverlay"
         Overlay.Parent = ScreenGui
         Overlay.BackgroundColor3 = Color3.new(0,0,0)
         Overlay.BackgroundTransparency = 0.5
         Overlay.Size = UDim2.new(1,0,1,0)
         Overlay.AutoButtonColor = false
         Overlay.Text = ""
-        Overlay.ZIndex = 10
+        Overlay.ZIndex = 20
 
         local Modal = Instance.new("Frame")
         Modal.Parent = Overlay
         Modal.BackgroundColor3 = Theme.Background
-        Modal.Size = UDim2.new(0, 300, 0, 150)
-        Modal.Position = UDim2.new(0.5, -150, 0.5, -75)
+        Modal.Size = UDim2.new(0, 320, 0, 160)
+        Modal.Position = UDim2.new(0.5, -160, 0.5, -80)
         
         local MCorner = Instance.new("UICorner")
         MCorner.CornerRadius = UDim.new(0, 12)
@@ -173,14 +181,14 @@ function Library:CreateWindow(Settings)
         MTitle.Text = "Terminate Script?"
         MTitle.Font = Enum.Font.GothamBold
         MTitle.TextColor3 = Theme.TextColor
-        MTitle.TextSize = 18
+        MTitle.TextSize = 20
         MTitle.Position = UDim2.new(0, 0, 0, 15)
         MTitle.Size = UDim2.new(1, 0, 0, 30)
         
         local MDesc = Instance.new("TextLabel")
         MDesc.Parent = Modal
         MDesc.BackgroundTransparency = 1
-        MDesc.Text = "Are you sure you want to close the UI and stop all processes?"
+        MDesc.Text = "Are you sure you want to terminate the script? This will stop all processes."
         MDesc.Font = Enum.Font.Gotham
         MDesc.TextColor3 = Theme.PlaceholderColor
         MDesc.TextSize = 14
@@ -188,37 +196,37 @@ function Library:CreateWindow(Settings)
         MDesc.Position = UDim2.new(0, 20, 0, 50)
         MDesc.Size = UDim2.new(1, -40, 0, 40)
 
-        local Yes = Instance.new("TextButton")
-        Yes.Parent = Modal
-        Yes.BackgroundColor3 = Theme.Crimson
-        Yes.Text = "Yes, Close"
-        Yes.TextColor3 = Color3.new(1,1,1)
-        Yes.Font = Enum.Font.GothamBold
-        Yes.TextSize = 14
-        Yes.Size = UDim2.new(0, 110, 0, 35)
-        Yes.Position = UDim2.new(0, 20, 1, -50)
-        local YC = Instance.new("UICorner"); YC.CornerRadius = UDim.new(0,6); YC.Parent = Yes
+        local YesBtn = Instance.new("TextButton")
+        YesBtn.Parent = Modal
+        YesBtn.BackgroundColor3 = Theme.Crimson
+        YesBtn.Text = "Yes, Terminate"
+        YesBtn.TextColor3 = Color3.new(1,1,1)
+        YesBtn.Font = Enum.Font.GothamBold
+        YesBtn.TextSize = 14
+        YesBtn.Size = UDim2.new(0, 130, 0, 35)
+        YesBtn.Position = UDim2.new(0, 20, 1, -50)
+        local YC = Instance.new("UICorner"); YC.CornerRadius = UDim.new(0,6); YC.Parent = YesBtn
 
-        local No = Instance.new("TextButton")
-        No.Parent = Modal
-        No.BackgroundColor3 = Theme.ElementBackground
-        No.Text = "Cancel"
-        No.TextColor3 = Theme.TextColor
-        No.Font = Enum.Font.GothamBold
-        No.TextSize = 14
-        No.Size = UDim2.new(0, 110, 0, 35)
-        No.Position = UDim2.new(1, -130, 1, -50)
-        local NC = Instance.new("UICorner"); NC.CornerRadius = UDim.new(0,6); NC.Parent = No
+        local NoBtn = Instance.new("TextButton")
+        NoBtn.Parent = Modal
+        NoBtn.BackgroundColor3 = Theme.ElementBackground
+        NoBtn.Text = "Cancel"
+        NoBtn.TextColor3 = Theme.TextColor
+        NoBtn.Font = Enum.Font.GothamBold
+        NoBtn.TextSize = 14
+        NoBtn.Size = UDim2.new(0, 130, 0, 35)
+        NoBtn.Position = UDim2.new(1, -150, 1, -50)
+        local NC = Instance.new("UICorner"); NC.CornerRadius = UDim.new(0,6); NC.Parent = NoBtn
 
-        Yes.MouseButton1Click:Connect(function()
+        YesBtn.MouseButton1Click:Connect(function()
             for _, cb in pairs(DestroyCallbacks) do task.spawn(cb) end
             ScreenGui:Destroy()
         end)
-        No.MouseButton1Click:Connect(function() Overlay:Destroy() end)
+        NoBtn.MouseButton1Click:Connect(function() Overlay:Destroy() end)
     end)
 
-    -- Minimize (-) - Order 2
-    CreateTopButton("Min", "-", 2, function()
+    -- Minimize (Order 2)
+    CreateTopButton("Minimize", Icons.Minimize, 2, function()
         Minimized = not Minimized
         if Minimized then
             Tween(Main, {Size = UDim2.new(0, 500, 0, 50)})
@@ -227,13 +235,14 @@ function Library:CreateWindow(Settings)
         end
     end)
 
-    -- Search (O/Glass) - Order 3
-    CreateTopButton("Search", "🔍", 3, function()
-        Library:Notify({Title="Search", Content="Not Implemented", Duration=1})
+    -- Search (Order 3) - Visual Placeholder
+    CreateTopButton("Search", Icons.Search, 3, function()
+        Library:Notify({Title="Search", Content="Search feature not implemented.", Duration=1})
     end)
 
-    --// TABS CONTAINER (Horizontal - Rayfield Style)
+    --// TABS CONTAINER (Rayfield Horizontal Style)
     local TabContainer = Instance.new("Frame")
+    TabContainer.Name = "TabContainer"
     TabContainer.Parent = Main
     TabContainer.BackgroundColor3 = Theme.Background
     TabContainer.BackgroundTransparency = 1
@@ -248,6 +257,7 @@ function Library:CreateWindow(Settings)
 
     --// CONTENT CONTAINER
     local ContentContainer = Instance.new("Frame")
+    ContentContainer.Name = "ContentContainer"
     ContentContainer.Parent = Main
     ContentContainer.BackgroundTransparency = 1
     ContentContainer.Position = UDim2.new(0, 0, 0, 95)
@@ -256,6 +266,7 @@ function Library:CreateWindow(Settings)
 
     --// NOTIFICATIONS
     local NotifHolder = Instance.new("Frame")
+    NotifHolder.Name = "Notifications"
     NotifHolder.Parent = ScreenGui
     NotifHolder.BackgroundTransparency = 1
     NotifHolder.Position = UDim2.new(1, -320, 1, -30)
@@ -303,14 +314,14 @@ function Library:CreateWindow(Settings)
         table.insert(DestroyCallbacks, func)
     end
 
-    --// TABS
+    --// TABS & ELEMENTS
     local FirstTab = true
 
-    function Window:CreateTab(Name)
+    function Window:CreateTab(Name, IconId)
         local Tab = {}
         
-        -- Pill Button
         local TabBtn = Instance.new("TextButton")
+        TabBtn.Name = Name .. "Tab"
         TabBtn.Parent = TabContainer
         TabBtn.BackgroundColor3 = Theme.TabContainer
         TabBtn.AutoButtonColor = false
@@ -319,13 +330,33 @@ function Library:CreateWindow(Settings)
         TabBtn.TextSize = 13
         TabBtn.TextColor3 = Theme.TextColor
         
-        -- Auto Width
+        -- Auto Width based on text size
         local Width = TextService:GetTextSize(TabBtn.Text, 13, Enum.Font.GothamBold, Vector2.new(1000, 100)).X
         TabBtn.Size = UDim2.new(0, Width + 20, 1, 0)
 
         local TC = Instance.new("UICorner"); TC.CornerRadius = UDim.new(1,0); TC.Parent = TabBtn
 
+        -- Optional Tab Icon
+        if IconId then
+             -- Logic to add icon if provided (user requested specific asset for settings)
+             local Img = Instance.new("ImageLabel")
+             Img.Parent = TabBtn
+             Img.BackgroundTransparency = 1
+             Img.Position = UDim2.new(0, 5, 0.5, -7)
+             Img.Size = UDim2.new(0, 14, 0, 14)
+             if type(IconId) == "number" then
+                Img.Image = "rbxassetid://" .. IconId
+             else
+                Img.Image = IconId
+             end
+             TabBtn.Text = "      " .. Name .. "  " -- Add padding for icon
+             -- Recalculate width
+             Width = TextService:GetTextSize(TabBtn.Text, 13, Enum.Font.GothamBold, Vector2.new(1000, 100)).X
+             TabBtn.Size = UDim2.new(0, Width + 10, 1, 0)
+        end
+
         local Scroll = Instance.new("ScrollingFrame")
+        Scroll.Name = Name .. "Content"
         Scroll.Parent = ContentContainer
         Scroll.BackgroundTransparency = 1
         Scroll.Size = UDim2.new(1, 0, 1, 0)
@@ -351,7 +382,7 @@ function Library:CreateWindow(Settings)
                 end 
             end
             Scroll.Visible = true
-            Tween(TabBtn, {BackgroundColor3 = Theme.TextColor, TextColor3 = Theme.Background}) -- Invert for active
+            Tween(TabBtn, {BackgroundColor3 = Theme.TextColor, TextColor3 = Theme.Background}) 
         end)
 
         if FirstTab then 
@@ -361,6 +392,7 @@ function Library:CreateWindow(Settings)
             TabBtn.TextColor3 = Color3.fromRGB(150,150,150)
         end
 
+        -- Element Construction Helpers
         function Tab:CreateSection(Text)
             local L = Instance.new("TextLabel")
             L.Parent = Scroll; L.BackgroundTransparency = 1
@@ -375,7 +407,6 @@ function Library:CreateWindow(Settings)
             Btn.Parent = Scroll; Btn.BackgroundColor3 = Theme.ElementBackground
             Btn.Size = UDim2.new(1,0,0,42); Btn.Text = ""; Btn.AutoButtonColor = false
             local BC = Instance.new("UICorner"); BC.CornerRadius = UDim.new(0,8); BC.Parent = Btn
-            
             local S = Instance.new("UIStroke"); S.Parent = Btn; S.Color = Theme.Stroke; S.Thickness = 1
             
             local L = Instance.new("TextLabel")
@@ -501,6 +532,41 @@ function Library:CreateWindow(Settings)
             TB.FocusLost:Connect(function(Enter)
                 if Config.Callback then Config.Callback(TB.Text) end
                 if Config.RemoveTextAfterFocusLost then TB.Text = "" end
+            end)
+        end
+
+        function Tab:CreateKeybind(Config)
+            local C = Instance.new("Frame")
+            C.Parent = Scroll; C.BackgroundColor3 = Theme.ElementBackground
+            C.Size = UDim2.new(1,0,0,42)
+            local CC = Instance.new("UICorner"); CC.CornerRadius = UDim.new(0,8); CC.Parent = C
+            local S = Instance.new("UIStroke"); S.Parent = C; S.Color = Theme.Stroke; S.Thickness = 1
+            
+            local T = Instance.new("TextLabel")
+            T.Parent = C; T.BackgroundTransparency = 1
+            T.Text = Config.Name; T.Font = Enum.Font.GothamMedium
+            T.TextColor3 = Theme.TextColor; T.TextSize = 14
+            T.Position = UDim2.new(0,15,0,0); T.Size = UDim2.new(1,-145,1,0)
+            T.TextXAlignment = Enum.TextXAlignment.Left
+            
+            local Btn = Instance.new("TextButton")
+            Btn.Parent = C; Btn.BackgroundColor3 = Color3.fromRGB(25,25,25)
+            Btn.Position = UDim2.new(1,-135,0.5,-12); Btn.Size = UDim2.new(0,120,0,24)
+            Btn.Text = Config.CurrentKeybind or "None"; Btn.Font = Enum.Font.Gotham; Btn.TextColor3 = Theme.PlaceholderColor
+            Btn.TextSize = 13; Btn.AutoButtonColor = false
+            local BC = Instance.new("UICorner"); BC.CornerRadius = UDim.new(0,4); BC.Parent = Btn
+            
+            local Listening = false
+            Btn.MouseButton1Click:Connect(function()
+                if Listening then return end
+                Listening = true
+                Btn.Text = "..."
+                local Input = UserInputService.InputBegan:Wait()
+                if Input.UserInputType == Enum.UserInputType.Keyboard then
+                    Btn.Text = Input.KeyCode.Name
+                    if Config.Callback then Config.Callback(Input.KeyCode) end
+                end
+                Listening = false
             end)
         end
 
