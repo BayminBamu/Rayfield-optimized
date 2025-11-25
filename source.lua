@@ -1,10 +1,11 @@
 --[[ 
     Rayfield Interface Suite (Optimized Standalone Library)
     -------------------------------------------------------
-    - FIXED: Topbar Buttons (Search, Min, Close) are now spaced correctly using UIListLayout.
+    - FIXED: Topbar Buttons (Search, Min, Close) now use a strict LayoutOrder to prevent overlap.
+    - ADDED: Termination Confirmation Modal on Close.
     - VISUALS: Exact Dark Theme & Rounded Corners.
     - BEHAVIOR: 2-Second Notifications.
-    - BLOAT: Removed (No Analytics, No Key System).
+    - CONTENT: Library ONLY. No Flight Scripts.
     
     USAGE:
     local Library = loadstring(readfile("this_script.lua"))()
@@ -28,7 +29,8 @@ local Theme = {
     PlaceholderColor = Color3.fromRGB(150, 150, 150),
     Accent = Color3.fromRGB(60, 140, 255),
     NotificationBG = Color3.fromRGB(20, 20, 20),
-    Stroke = Color3.fromRGB(50, 50, 50)
+    Stroke = Color3.fromRGB(50, 50, 50),
+    Crimson = Color3.fromRGB(255, 65, 65)
 }
 
 local Icons = {
@@ -62,6 +64,7 @@ end
 function Library:CreateWindow(Settings)
     local Window = {}
     local Minimized = false
+    local DestroyCallbacks = {}
     
     -- Main ScreenGui
     local ScreenGui = Instance.new("ScreenGui")
@@ -121,41 +124,43 @@ function Library:CreateWindow(Settings)
     Title.TextXAlignment = Enum.TextXAlignment.Left
 
     --// CONTROL BUTTONS (FIXED LAYOUT)
-    -- Using a container with UIListLayout ensures buttons NEVER overlap
+    -- We use a wide container with UIListLayout set to Right Alignment to prevent overlaps
     local ButtonContainer = Instance.new("Frame")
     ButtonContainer.Name = "ButtonContainer"
     ButtonContainer.Parent = Topbar
     ButtonContainer.BackgroundTransparency = 1
-    ButtonContainer.Size = UDim2.new(0, 120, 1, 0)
-    ButtonContainer.Position = UDim2.new(1, -125, 0, 0) 
+    ButtonContainer.Position = UDim2.new(1, -140, 0, 0) 
+    ButtonContainer.Size = UDim2.new(0, 130, 1, 0)
 
     local ButtonLayout = Instance.new("UIListLayout")
     ButtonLayout.Parent = ButtonContainer
     ButtonLayout.FillDirection = Enum.FillDirection.Horizontal
     ButtonLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
     ButtonLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    ButtonLayout.Padding = UDim.new(0, 5)
+    ButtonLayout.Padding = UDim.new(0, 5) -- 5px gap between buttons
+    
+    -- Padding to keep away from right edge
+    local ButtonPad = Instance.new("UIPadding")
+    ButtonPad.Parent = ButtonContainer
+    ButtonPad.PaddingRight = UDim.new(0, 15)
 
     local function CreateTopBtn(Name, Icon, Order, Callback)
+        -- Wrapper ensures size is respected by ListLayout
+        local BtnWrapper = Instance.new("Frame")
+        BtnWrapper.Name = Name .. "_Wrapper"
+        BtnWrapper.Parent = ButtonContainer
+        BtnWrapper.BackgroundTransparency = 1
+        BtnWrapper.Size = UDim2.new(0, 30, 1, 0)
+        BtnWrapper.LayoutOrder = Order
+
         local Btn = Instance.new("ImageButton")
         Btn.Name = Name
-        Btn.Parent = ButtonContainer
+        Btn.Parent = BtnWrapper
         Btn.BackgroundTransparency = 1
         Btn.Image = Icon
         Btn.ImageColor3 = Color3.fromRGB(150, 150, 150)
-        Btn.Size = UDim2.new(0, 25, 0, 25)
-        Btn.LayoutOrder = Order
-        
-        -- Center vertically within the container line (manual tweaking for UIListLayout behavior)
-        local VAlign = Instance.new("Frame") -- Wrapper to center vertically
-        VAlign.Name = Name .. "_Wrapper"
-        VAlign.Parent = ButtonContainer
-        VAlign.BackgroundTransparency = 1
-        VAlign.Size = UDim2.new(0, 30, 1, 0)
-        VAlign.LayoutOrder = Order
-        
-        Btn.Parent = VAlign
-        Btn.Position = UDim2.new(0.5, -12, 0.5, -12)
+        Btn.Size = UDim2.new(0, 20, 0, 20)
+        Btn.Position = UDim2.new(0.5, -10, 0.5, -10) -- Center in wrapper
 
         Btn.MouseEnter:Connect(function() Tween(Btn, {ImageColor3 = Color3.new(1,1,1)}) end)
         Btn.MouseLeave:Connect(function() Tween(Btn, {ImageColor3 = Color3.fromRGB(150,150,150)}) end)
@@ -164,9 +169,92 @@ function Library:CreateWindow(Settings)
 
     -- Close Button (Order 3: Far Right)
     CreateTopBtn("Close", Icons.Close, 3, function()
-        Library:Notify({Title = "Closing", Content = "Interface terminated.", Duration = 1})
-        task.wait(0.2)
-        ScreenGui:Destroy()
+        -- TERMINATION CONFIRMATION MODAL
+        local Overlay = Instance.new("TextButton")
+        Overlay.Name = "Overlay"
+        Overlay.Parent = ScreenGui
+        Overlay.BackgroundColor3 = Color3.new(0,0,0)
+        Overlay.BackgroundTransparency = 0.5
+        Overlay.Size = UDim2.new(1,0,1,0)
+        Overlay.AutoButtonColor = false
+        Overlay.Text = ""
+        Overlay.ZIndex = 10
+
+        local Modal = Instance.new("Frame")
+        Modal.Name = "ConfirmationModal"
+        Modal.Parent = Overlay
+        Modal.BackgroundColor3 = Theme.Background
+        Modal.Size = UDim2.new(0, 320, 0, 160)
+        Modal.Position = UDim2.new(0.5, -160, 0.5, -80)
+        
+        local MCorner = Instance.new("UICorner")
+        MCorner.CornerRadius = UDim.new(0, 12)
+        MCorner.Parent = Modal
+        
+        local MStroke = Instance.new("UIStroke")
+        MStroke.Parent = Modal
+        MStroke.Color = Theme.Stroke
+        MStroke.Thickness = 1
+
+        local MTitle = Instance.new("TextLabel")
+        MTitle.Parent = Modal
+        MTitle.BackgroundTransparency = 1
+        MTitle.Text = "Terminate Script?"
+        MTitle.Font = Enum.Font.GothamBold
+        MTitle.TextColor3 = Theme.TextColor
+        MTitle.TextSize = 20
+        MTitle.Position = UDim2.new(0, 0, 0, 15)
+        MTitle.Size = UDim2.new(1, 0, 0, 30)
+        
+        local MDesc = Instance.new("TextLabel")
+        MDesc.Parent = Modal
+        MDesc.BackgroundTransparency = 1
+        MDesc.Text = "Are you sure you want to terminate the script? This will stop all processes."
+        MDesc.Font = Enum.Font.Gotham
+        MDesc.TextColor3 = Theme.PlaceholderColor
+        MDesc.TextSize = 14
+        MDesc.TextWrapped = true
+        MDesc.Position = UDim2.new(0, 20, 0, 50)
+        MDesc.Size = UDim2.new(1, -40, 0, 40)
+
+        -- Yes Button
+        local YesBtn = Instance.new("TextButton")
+        YesBtn.Parent = Modal
+        YesBtn.BackgroundColor3 = Theme.Crimson
+        YesBtn.Text = "Yes, Terminate"
+        YesBtn.Font = Enum.Font.GothamBold
+        YesBtn.TextColor3 = Color3.new(1,1,1)
+        YesBtn.TextSize = 14
+        YesBtn.Size = UDim2.new(0, 130, 0, 35)
+        YesBtn.Position = UDim2.new(0, 20, 1, -50)
+        
+        local YCorner = Instance.new("UICorner")
+        YCorner.CornerRadius = UDim.new(0, 6)
+        YCorner.Parent = YesBtn
+        
+        -- Cancel Button
+        local NoBtn = Instance.new("TextButton")
+        NoBtn.Parent = Modal
+        NoBtn.BackgroundColor3 = Theme.ElementBackground
+        NoBtn.Text = "Cancel"
+        NoBtn.Font = Enum.Font.GothamBold
+        NoBtn.TextColor3 = Theme.TextColor
+        NoBtn.TextSize = 14
+        NoBtn.Size = UDim2.new(0, 130, 0, 35)
+        NoBtn.Position = UDim2.new(1, -150, 1, -50)
+        
+        local NCorner = Instance.new("UICorner")
+        NCorner.CornerRadius = UDim.new(0, 6)
+        NCorner.Parent = NoBtn
+
+        YesBtn.MouseButton1Click:Connect(function()
+            for _, cb in pairs(DestroyCallbacks) do task.spawn(cb) end
+            ScreenGui:Destroy()
+        end)
+        
+        NoBtn.MouseButton1Click:Connect(function()
+            Overlay:Destroy()
+        end)
     end)
 
     -- Minimize Button (Order 2: Middle)
@@ -181,7 +269,7 @@ function Library:CreateWindow(Settings)
 
     -- Search Button (Order 1: Left)
     CreateTopBtn("Search", Icons.Search, 1, function()
-        Library:Notify({Title = "Search", Content = "Search not implemented.", Duration = 2})
+        Library:Notify({Title = "Search", Content = "Search feature not implemented.", Duration = 2})
     end)
 
     --// TABS CONTAINER
@@ -261,14 +349,19 @@ function Library:CreateWindow(Settings)
             Tween(NTitle, {TextTransparency = 1}, 0.3)
             Tween(NDesc, {TextTransparency = 1}, 0.3)
             task.wait(0.3)
-            Notif:Destroy()
+            if Notif then Notif:Destroy() end
         end)
+    end
+    
+    -- Cleanup Hook
+    function Library:OnDestroy(func)
+        table.insert(DestroyCallbacks, func)
     end
 
     --// TAB SYSTEM
     local FirstTab = true
 
-    function Window:CreateTab(Name)
+    function Window:CreateTab(Name, IconId)
         local Tab = {}
         
         local TabBtn = Instance.new("TextButton")
