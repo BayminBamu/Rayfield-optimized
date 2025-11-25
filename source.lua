@@ -1,11 +1,14 @@
---[[
-    Rayfield Optimized Library (Standalone)
-    Visuals: Exact Rayfield Replica (Dark Theme, Horizontal Pills, Top-Right Icons)
-    Features: 
-        - Minimizable
-        - Search Button (Placeholder)
-        - 2s Notifications
-        - Optimized (No bloat/analytics)
+--[[ 
+    Rayfield Interface Suite (Optimized Standalone Library)
+    -------------------------------------------------------
+    - FIXED: Topbar Buttons (Search, Min, Close) are now spaced correctly using UIListLayout.
+    - VISUALS: Exact Dark Theme & Rounded Corners.
+    - BEHAVIOR: 2-Second Notifications.
+    - BLOAT: Removed (No Analytics, No Key System).
+    
+    USAGE:
+    local Library = loadstring(readfile("this_script.lua"))()
+    local Window = Library:CreateWindow({Name = "My Script"})
 ]]
 
 local Library = {}
@@ -15,24 +18,7 @@ local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
 local TextService = game:GetService("TextService")
 
---------------------------------------------------------------------------------
---// UTILITIES & THEME
---------------------------------------------------------------------------------
-
-local function GetUIContainer()
-    if gethui then return gethui() end
-    if Synapse and Synapse.ProtectGui then 
-        local gui = Instance.new("ScreenGui")
-        Synapse.ProtectGui(gui)
-        gui.Parent = CoreGui
-        return gui
-    elseif CoreGui:FindFirstChild("RobloxGui") then
-        return CoreGui:FindFirstChild("RobloxGui")
-    else
-        return CoreGui
-    end
-end
-
+--// THEME CONFIGURATION
 local Theme = {
     Background = Color3.fromRGB(25, 25, 25),
     Topbar = Color3.fromRGB(25, 25, 25),
@@ -52,26 +38,39 @@ local Icons = {
     Settings = "rbxassetid://3944672058"
 }
 
+--// UTILITY FUNCTIONS
+local function GetUIContainer()
+    if gethui then return gethui() end
+    if Synapse and Synapse.ProtectGui then 
+        local gui = Instance.new("ScreenGui")
+        Synapse.ProtectGui(gui)
+        gui.Parent = CoreGui
+        return gui
+    elseif CoreGui:FindFirstChild("RobloxGui") then
+        return CoreGui:FindFirstChild("RobloxGui")
+    else
+        return CoreGui
+    end
+end
+
 local function Tween(obj, props, time)
     local info = TweenInfo.new(time or 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
     TweenService:Create(obj, info, props):Play()
 end
 
---------------------------------------------------------------------------------
 --// LIBRARY MAIN
---------------------------------------------------------------------------------
-
 function Library:CreateWindow(Settings)
     local Window = {}
     local Minimized = false
     
-    --// Main UI Setup
+    -- Main ScreenGui
     local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "RayfieldOptimized"
+    ScreenGui.Name = "RayfieldOptimized_" .. (Settings.Name or "UI")
     ScreenGui.ResetOnSpawn = false
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     ScreenGui.Parent = GetUIContainer()
 
+    -- Main Frame
     local Main = Instance.new("Frame")
     Main.Name = "Main"
     Main.Parent = ScreenGui
@@ -84,7 +83,7 @@ function Library:CreateWindow(Settings)
     MainCorner.CornerRadius = UDim.new(0, 12)
     MainCorner.Parent = Main
 
-    --// Dragging
+    -- Dragging Logic
     local dragging, dragInput, dragStart, startPos
     Main.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -102,13 +101,15 @@ function Library:CreateWindow(Settings)
         end
     end)
 
-    --// Topbar
+    --// TOPBAR
     local Topbar = Instance.new("Frame")
+    Topbar.Name = "Topbar"
     Topbar.Parent = Main
     Topbar.BackgroundTransparency = 1
     Topbar.Size = UDim2.new(1, 0, 0, 50)
     
     local Title = Instance.new("TextLabel")
+    Title.Name = "Title"
     Title.Parent = Topbar
     Title.Text = Settings.Name or "Rayfield"
     Title.Font = Enum.Font.GothamBold
@@ -119,38 +120,57 @@ function Library:CreateWindow(Settings)
     Title.Size = UDim2.new(0.5, 0, 1, 0)
     Title.TextXAlignment = Enum.TextXAlignment.Left
 
-    --// Header Buttons (Search, Min, Close)
-    local ButtonHolder = Instance.new("Frame")
-    ButtonHolder.Parent = Topbar
-    ButtonHolder.BackgroundTransparency = 1
-    ButtonHolder.Size = UDim2.new(0, 120, 1, 0)
-    ButtonHolder.Position = UDim2.new(1, -120, 0, 0)
+    --// CONTROL BUTTONS (FIXED LAYOUT)
+    -- Using a container with UIListLayout ensures buttons NEVER overlap
+    local ButtonContainer = Instance.new("Frame")
+    ButtonContainer.Name = "ButtonContainer"
+    ButtonContainer.Parent = Topbar
+    ButtonContainer.BackgroundTransparency = 1
+    ButtonContainer.Size = UDim2.new(0, 120, 1, 0)
+    ButtonContainer.Position = UDim2.new(1, -125, 0, 0) 
 
-    local function CreateIconBtn(name, iconId, order, callback)
+    local ButtonLayout = Instance.new("UIListLayout")
+    ButtonLayout.Parent = ButtonContainer
+    ButtonLayout.FillDirection = Enum.FillDirection.Horizontal
+    ButtonLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+    ButtonLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    ButtonLayout.Padding = UDim.new(0, 5)
+
+    local function CreateTopBtn(Name, Icon, Order, Callback)
         local Btn = Instance.new("ImageButton")
-        Btn.Name = name
-        Btn.Parent = ButtonHolder
+        Btn.Name = Name
+        Btn.Parent = ButtonContainer
         Btn.BackgroundTransparency = 1
-        Btn.Image = iconId
-        Btn.ImageColor3 = Color3.fromRGB(180, 180, 180)
-        Btn.Position = UDim2.new(1, -35 * order, 0.5, -10)
-        Btn.Size = UDim2.new(0, 20, 0, 20)
+        Btn.Image = Icon
+        Btn.ImageColor3 = Color3.fromRGB(150, 150, 150)
+        Btn.Size = UDim2.new(0, 25, 0, 25)
+        Btn.LayoutOrder = Order
         
+        -- Center vertically within the container line (manual tweaking for UIListLayout behavior)
+        local VAlign = Instance.new("Frame") -- Wrapper to center vertically
+        VAlign.Name = Name .. "_Wrapper"
+        VAlign.Parent = ButtonContainer
+        VAlign.BackgroundTransparency = 1
+        VAlign.Size = UDim2.new(0, 30, 1, 0)
+        VAlign.LayoutOrder = Order
+        
+        Btn.Parent = VAlign
+        Btn.Position = UDim2.new(0.5, -12, 0.5, -12)
+
         Btn.MouseEnter:Connect(function() Tween(Btn, {ImageColor3 = Color3.new(1,1,1)}) end)
-        Btn.MouseLeave:Connect(function() Tween(Btn, {ImageColor3 = Color3.fromRGB(180,180,180)}) end)
-        Btn.MouseButton1Click:Connect(callback)
-        return Btn
+        Btn.MouseLeave:Connect(function() Tween(Btn, {ImageColor3 = Color3.fromRGB(150,150,150)}) end)
+        Btn.MouseButton1Click:Connect(Callback)
     end
 
-    -- Close (Terminates Interface)
-    CreateIconBtn("Close", Icons.Close, 1, function()
-        Library:Notify({Title="Closing", Content="UI Closed.", Duration=1})
+    -- Close Button (Order 3: Far Right)
+    CreateTopBtn("Close", Icons.Close, 3, function()
+        Library:Notify({Title = "Closing", Content = "Interface terminated.", Duration = 1})
         task.wait(0.2)
         ScreenGui:Destroy()
     end)
 
-    -- Minimize
-    CreateIconBtn("Min", Icons.Minimize, 2, function()
+    -- Minimize Button (Order 2: Middle)
+    CreateTopBtn("Minimize", Icons.Minimize, 2, function()
         Minimized = not Minimized
         if Minimized then
             Tween(Main, {Size = UDim2.new(0, 500, 0, 50)})
@@ -159,14 +179,14 @@ function Library:CreateWindow(Settings)
         end
     end)
 
-    -- Search (Visual Only)
-    CreateIconBtn("Search", Icons.Search, 3, function()
-        -- Search logic would go here
-        Library:Notify({Title="Search", Content="Search feature placeholder.", Duration=2})
+    -- Search Button (Order 1: Left)
+    CreateTopBtn("Search", Icons.Search, 1, function()
+        Library:Notify({Title = "Search", Content = "Search not implemented.", Duration = 2})
     end)
 
-    --// Tabs Container
+    --// TABS CONTAINER
     local TabContainer = Instance.new("Frame")
+    TabContainer.Name = "TabContainer"
     TabContainer.Parent = Main
     TabContainer.BackgroundColor3 = Theme.Background
     TabContainer.BackgroundTransparency = 1
@@ -179,16 +199,18 @@ function Library:CreateWindow(Settings)
     TabList.SortOrder = Enum.SortOrder.LayoutOrder
     TabList.Padding = UDim.new(0, 10)
 
-    --// Content Container
+    --// CONTENT CONTAINER
     local ContentContainer = Instance.new("Frame")
+    ContentContainer.Name = "ContentContainer"
     ContentContainer.Parent = Main
     ContentContainer.BackgroundTransparency = 1
     ContentContainer.Position = UDim2.new(0, 0, 0, 95)
     ContentContainer.Size = UDim2.new(1, 0, 1, -100)
     ContentContainer.ClipsDescendants = true
 
-    --// Notification System
+    --// NOTIFICATION SYSTEM
     local NotifContainer = Instance.new("Frame")
+    NotifContainer.Name = "Notifications"
     NotifContainer.Parent = ScreenGui
     NotifContainer.BackgroundTransparency = 1
     NotifContainer.Position = UDim2.new(1, -320, 1, -30)
@@ -233,36 +255,24 @@ function Library:CreateWindow(Settings)
         NDesc.Size = UDim2.new(1, -20, 0, 20)
         NDesc.TextXAlignment = Enum.TextXAlignment.Left
 
-        local DismissBtn = Instance.new("TextButton")
-        DismissBtn.Parent = Notif
-        DismissBtn.BackgroundTransparency = 1
-        DismissBtn.Size = UDim2.new(1, 0, 1, 0)
-        DismissBtn.Text = ""
-
-        local isClosing = false
-        local function CloseNotif()
-            if isClosing then return end
-            isClosing = true
+        -- Auto Close (2 Seconds fixed)
+        task.delay(Config.Duration or 2, function()
             Tween(Notif, {BackgroundTransparency = 1}, 0.3)
             Tween(NTitle, {TextTransparency = 1}, 0.3)
             Tween(NDesc, {TextTransparency = 1}, 0.3)
             task.wait(0.3)
             Notif:Destroy()
-        end
-
-        DismissBtn.MouseButton1Click:Connect(CloseNotif)
-
-        -- Auto Close after 2 seconds (or Config.Duration)
-        task.delay(Config.Duration or 2, CloseNotif)
+        end)
     end
 
-    --// Tab Creation
+    --// TAB SYSTEM
     local FirstTab = true
 
     function Window:CreateTab(Name)
         local Tab = {}
         
         local TabBtn = Instance.new("TextButton")
+        TabBtn.Name = Name .. "Tab"
         TabBtn.Parent = TabContainer
         TabBtn.BackgroundColor3 = Theme.TabContainer
         TabBtn.AutoButtonColor = false
@@ -271,14 +281,15 @@ function Library:CreateWindow(Settings)
         TabBtn.TextSize = 13
         TabBtn.TextColor3 = Theme.TextColor
         
-        local textWidth = TextService:GetTextSize(TabBtn.Text, 13, Enum.Font.GothamBold, Vector2.new(1000, 100)).X
-        TabBtn.Size = UDim2.new(0, textWidth + 20, 1, 0)
+        local Width = TextService:GetTextSize(TabBtn.Text, 13, Enum.Font.GothamBold, Vector2.new(1000, 100)).X
+        TabBtn.Size = UDim2.new(0, Width + 20, 1, 0)
 
         local TabCorner = Instance.new("UICorner")
         TabCorner.CornerRadius = UDim.new(1, 0)
         TabCorner.Parent = TabBtn
 
         local Scroll = Instance.new("ScrollingFrame")
+        Scroll.Name = Name .. "Content"
         Scroll.Parent = ContentContainer
         Scroll.BackgroundTransparency = 1
         Scroll.Size = UDim2.new(1, 0, 1, 0)
@@ -316,8 +327,7 @@ function Library:CreateWindow(Settings)
             TabBtn.TextColor3 = Color3.fromRGB(150,150,150)
         end
 
-        --// Elements
-        
+        --// UI ELEMENTS
         function Tab:CreateSection(Text)
             local SectionLabel = Instance.new("TextLabel")
             SectionLabel.Parent = Scroll
@@ -390,7 +400,6 @@ function Library:CreateWindow(Settings)
 
         function Tab:CreateSlider(Config)
             local Value = Config.CurrentValue or Config.Range[1]
-            
             local Container = Instance.new("Frame")
             Container.Parent = Scroll
             Container.BackgroundColor3 = Theme.ElementBackground
@@ -504,7 +513,7 @@ function Library:CreateWindow(Settings)
                 if Config.Callback then Config.Callback() end
             end)
         end
-        
+
         function Tab:CreateLabel(Text)
             local Label = Instance.new("TextLabel")
             Label.Parent = Scroll
