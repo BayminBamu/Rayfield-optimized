@@ -1,13 +1,17 @@
 --[[ 
     Rayfield Interface Suite (Optimized Standalone Library)
     -------------------------------------------------------
-    - TOPBAR: Fixed Button Positioning (Anchored Right).
-    - SETTINGS: Moved to Topbar (Icon: 1402032199).
-    - TERMINATION: Confirmation Modal included.
-    - LAYOUT: Standard Rayfield Horizontal Tabs.
+    - TARGET: Library Source Code ONLY.
+    - LAYOUT: Exact Rayfield Replica (Horizontal Tabs).
+    - TOPBAR: 
+        1. Close (X) -> Termination Warning
+        2. Minimize (-)
+        3. Settings (Icon: 1402032199) -> Keybind UI
+        4. Search (Magnifying Glass) -> Visual Placeholder
+    - FIXED: Buttons use Manual Anchoring to prevent glitches.
     
     USAGE:
-    local Library = loadstring(readfile("rayfield_optimized.lua"))()
+    local Library = loadstring(readfile("rayfield_lib.lua"))()
     local Window = Library:CreateWindow({Name = "Script Name"})
 ]]
 
@@ -21,7 +25,7 @@ local TextService = game:GetService("TextService")
 --// THEME
 local Theme = {
     Background = Color3.fromRGB(25, 25, 25),
-    Topbar = Color3.fromRGB(25, 25, 25),
+    Topbar = Color3.fromRGB(25, 25, 25), -- Seamless
     TabContainer = Color3.fromRGB(35, 35, 35),
     ElementBackground = Color3.fromRGB(32, 32, 32),
     TextColor = Color3.fromRGB(240, 240, 240),
@@ -37,7 +41,7 @@ local Icons = {
     Search = "rbxassetid://3944680069",
     Close = "rbxassetid://3944676352",
     Minimize = "rbxassetid://3944652232",
-    Settings = "rbxassetid://1402032199" -- Requested Icon
+    Settings = "rbxassetid://1402032199" -- Requested Custom Asset
 }
 
 --// UTILITY
@@ -60,17 +64,17 @@ local function Tween(obj, props, time)
     TweenService:Create(obj, info, props):Play()
 end
 
---// MAIN LIBRARY
+--// LIBRARY MAIN
 function Library:CreateWindow(Config)
     local Window = {}
     local Minimized = false
     local SettingsOpen = false
-    local UIKeybind = Enum.KeyCode.RightControl -- Default
+    local UIKeybind = Enum.KeyCode.RightControl
     local DestroyCallbacks = {}
     
     -- Main GUI
     local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "RayfieldOptimized"
+    ScreenGui.Name = "RayfieldOptimized_" .. (Config.Name or "UI")
     ScreenGui.ResetOnSpawn = false
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     ScreenGui.Parent = GetUIContainer()
@@ -87,7 +91,7 @@ function Library:CreateWindow(Config)
     MainCorner.CornerRadius = UDim.new(0, 12)
     MainCorner.Parent = Main
 
-    -- Dragging
+    -- Dragging Logic
     local dragging, dragInput, dragStart, startPos
     Main.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -122,13 +126,12 @@ function Library:CreateWindow(Config)
     Title.Size = UDim2.new(0.5, 0, 1, 0)
     Title.TextXAlignment = Enum.TextXAlignment.Left
 
-    --// TOPBAR BUTTONS (Manual Anchored Positioning)
-    -- This container is anchored to the right side.
+    --// BUTTONS (Manual Right Anchoring)
     local ButtonContainer = Instance.new("Frame")
     ButtonContainer.Parent = Topbar
     ButtonContainer.BackgroundTransparency = 1
     ButtonContainer.AnchorPoint = Vector2.new(1, 0)
-    ButtonContainer.Position = UDim2.new(1, -15, 0, 0) -- 15px margin from right edge
+    ButtonContainer.Position = UDim2.new(1, -15, 0, 0) -- 15px Padding from Right Edge
     ButtonContainer.Size = UDim2.new(0, 150, 1, 0)
 
     local function CreateTopBtn(Name, Icon, OffsetX, Callback)
@@ -139,18 +142,17 @@ function Library:CreateWindow(Config)
         Btn.Image = Icon
         Btn.ImageColor3 = Color3.fromRGB(150, 150, 150)
         Btn.Size = UDim2.new(0, 20, 0, 20)
-        -- Hardcoded position from right to ensure stability
+        -- Hardcoded offsets ensure they NEVER overlap or glitch
         Btn.Position = UDim2.new(1, OffsetX, 0.5, -10) 
         
         Btn.MouseEnter:Connect(function() Tween(Btn, {ImageColor3 = Color3.new(1,1,1)}) end)
         Btn.MouseLeave:Connect(function() Tween(Btn, {ImageColor3 = Color3.fromRGB(150,150,150)}) end)
         Btn.MouseButton1Click:Connect(Callback)
-        return Btn
     end
 
-    -- Close (X) -> Rightmost
+    -- 1. Close Button (Far Right)
     CreateTopBtn("Close", Icons.Close, -25, function()
-        -- TERMINATION MODAL
+        -- Termination Warning Modal
         local Overlay = Instance.new("TextButton")
         Overlay.Name = "Blocker"
         Overlay.Parent = ScreenGui
@@ -204,7 +206,7 @@ function Library:CreateWindow(Config)
         No.MouseButton1Click:Connect(function() Overlay:Destroy() end)
     end)
 
-    -- Minimize (-) -> Left of Close
+    -- 2. Minimize Button
     CreateTopBtn("Min", Icons.Minimize, -60, function()
         Minimized = not Minimized
         if Minimized then
@@ -214,10 +216,10 @@ function Library:CreateWindow(Config)
         end
     end)
 
-    -- Settings (Gear) -> Left of Minimize
+    -- 3. Settings Button (Using your Custom Asset)
     CreateTopBtn("Settings", Icons.Settings, -95, function()
         SettingsOpen = not SettingsOpen
-        -- We'll create a simple Settings Overlay inside Main
+        -- Keybind Changer Overlay
         local SetFrame = Main:FindFirstChild("SettingsOverlay")
         if not SetFrame then
             SetFrame = Instance.new("Frame")
@@ -225,7 +227,7 @@ function Library:CreateWindow(Config)
             SetFrame.Parent = Main
             SetFrame.BackgroundColor3 = Theme.Background
             SetFrame.Size = UDim2.new(1, 0, 1, -50)
-            SetFrame.Position = UDim2.new(0, 0, 1, 0) -- Hidden
+            SetFrame.Position = UDim2.new(0, 0, 1, 0) -- Hidden initially
             SetFrame.ZIndex = 5
             
             local KeyBtn = Instance.new("TextButton")
@@ -259,9 +261,9 @@ function Library:CreateWindow(Config)
         end
     end)
 
-    -- Search (Magnifying Glass) -> Left of Settings
+    -- 4. Search Button (Placeholder)
     CreateTopBtn("Search", Icons.Search, -130, function()
-        Library:Notify({Title="Search", Content="Search Placeholder", Duration=1})
+        Library:Notify({Title="Search", Content="No options found.", Duration=1})
     end)
 
     --// TOGGLE UI LOGIC
@@ -271,9 +273,10 @@ function Library:CreateWindow(Config)
         end
     end)
 
-    --// TABS
+    --// TABS (Horizontal Layout)
     local TabContainer = Instance.new("Frame")
     TabContainer.Parent = Main
+    TabContainer.BackgroundColor3 = Theme.Background
     TabContainer.BackgroundTransparency = 1
     TabContainer.Position = UDim2.new(0, 20, 0, 50)
     TabContainer.Size = UDim2.new(1, -40, 0, 35)
@@ -291,7 +294,7 @@ function Library:CreateWindow(Config)
     ContentContainer.Size = UDim2.new(1, 0, 1, -100)
     ContentContainer.ClipsDescendants = true
 
-    --// NOTIFICATIONS
+    --// NOTIFICATIONS (2 Seconds)
     local NotifHolder = Instance.new("Frame")
     NotifHolder.Parent = ScreenGui
     NotifHolder.BackgroundTransparency = 1
@@ -342,7 +345,7 @@ function Library:CreateWindow(Config)
         table.insert(DestroyCallbacks, func)
     end
 
-    --// ELEMENT CREATION
+    --// ELEMENTS
     local FirstTab = true
 
     function Window:CreateTab(Name)
@@ -468,6 +471,27 @@ function Library:CreateWindow(Config)
                 task.wait(0.1)
                 Tween(B, {BackgroundColor3 = Theme.ElementBackground}, 0.1)
                 if Config.Callback then Config.Callback() end
+            end)
+        end
+
+        function Tab:CreateInput(Config)
+            local C = Instance.new("Frame"); C.Parent = Scroll; C.BackgroundColor3 = Theme.ElementBackground; C.Size = UDim2.new(1,0,0,42)
+            local CC = Instance.new("UICorner"); CC.CornerRadius = UDim.new(0,8); CC.Parent = C
+            local S = Instance.new("UIStroke"); S.Parent = C; S.Color = Theme.Stroke; S.Thickness = 1
+            
+            local T = Instance.new("TextLabel"); T.Parent = C; T.BackgroundTransparency = 1; T.Text = Config.Name
+            T.Font = Enum.Font.GothamMedium; T.TextColor3 = Theme.TextColor; T.TextSize = 14
+            T.Position = UDim2.new(0,15,0,0); T.Size = UDim2.new(1,-145,1,0); T.TextXAlignment = Enum.TextXAlignment.Left
+            
+            local TB = Instance.new("TextBox"); TB.Parent = C; TB.BackgroundColor3 = Color3.fromRGB(25,25,25)
+            TB.Position = UDim2.new(1,-135,0.5,-12); TB.Size = UDim2.new(0,120,0,24)
+            TB.Font = Enum.Font.Gotham; TB.Text = ""; TB.PlaceholderText = Config.PlaceholderText or "Input"
+            TB.TextColor3 = Theme.TextColor; TB.PlaceholderColor3 = Theme.PlaceholderColor; TB.TextSize = 13
+            local TBC = Instance.new("UICorner"); TBC.CornerRadius = UDim.new(0,4); TBC.Parent = TB
+            
+            TB.FocusLost:Connect(function()
+                if Config.Callback then Config.Callback(TB.Text) end
+                if Config.RemoveTextAfterFocusLost then TB.Text = "" end
             end)
         end
 
