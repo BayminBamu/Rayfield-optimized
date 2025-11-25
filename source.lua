@@ -1,10 +1,14 @@
 --[[ 
     Rayfield Interface Suite (Optimized Standalone Library)
     -------------------------------------------------------
-    - CONTENT: UI Library Source Code ONLY.
-    - FIXES: Topbar buttons use static positioning to prevent glitches.
-    - LAYOUT: Settings button moved to Topbar (Icon: 1402032199).
-    - FEATURES: Termination Warning, Horizontal Tabs, Keybind System.
+    - TARGET: Library Source Code ONLY.
+    - LAYOUT: Exact Rayfield Replica (Horizontal Tabs).
+    - TOPBAR: 
+        1. Close (X) -> Termination Warning
+        2. Minimize (-)
+        3. Settings (Icon: 1402032199) -> Keybind UI
+        4. Search (Magnifying Glass) -> Visual Placeholder
+    - FIXED: Buttons use Manual Anchoring to prevent glitches.
     
     USAGE:
     local Library = loadstring(readfile("rayfield_optimized.lua"))()
@@ -21,7 +25,7 @@ local TextService = game:GetService("TextService")
 --// THEME
 local Theme = {
     Background = Color3.fromRGB(25, 25, 25),
-    Topbar = Color3.fromRGB(25, 25, 25),
+    Topbar = Color3.fromRGB(25, 25, 25), -- Seamless
     TabContainer = Color3.fromRGB(35, 35, 35),
     ElementBackground = Color3.fromRGB(32, 32, 32),
     TextColor = Color3.fromRGB(240, 240, 240),
@@ -37,10 +41,10 @@ local Icons = {
     Search = "rbxassetid://3944680069",
     Close = "rbxassetid://3944676352",
     Minimize = "rbxassetid://3944652232",
-    Settings = "rbxassetid://1402032199" -- Requested Settings Icon
+    Settings = "rbxassetid://1402032199" -- Requested Custom Asset
 }
 
---// UTILITIES
+--// UTILITY
 local function GetUIContainer()
     if gethui then return gethui() end
     if Synapse and Synapse.ProtectGui then 
@@ -61,7 +65,7 @@ local function Tween(obj, props, time)
 end
 
 --// LIBRARY MAIN
-function Library:CreateWindow(Settings)
+function Library:CreateWindow(Config)
     local Window = {}
     local Minimized = false
     local SettingsOpen = false
@@ -70,7 +74,7 @@ function Library:CreateWindow(Settings)
     
     -- Main GUI
     local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "RayfieldOptimized_" .. (Settings.Name or "UI")
+    ScreenGui.Name = "RayfieldOptimized_" .. (Config.Name or "UI")
     ScreenGui.ResetOnSpawn = false
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     ScreenGui.Parent = GetUIContainer()
@@ -113,7 +117,7 @@ function Library:CreateWindow(Settings)
     
     local Title = Instance.new("TextLabel")
     Title.Parent = Topbar
-    Title.Text = Settings.Name or "Rayfield"
+    Title.Text = Config.Name or "Rayfield"
     Title.Font = Enum.Font.GothamBold
     Title.TextSize = 18
     Title.TextColor3 = Theme.TextColor
@@ -122,14 +126,13 @@ function Library:CreateWindow(Settings)
     Title.Size = UDim2.new(0.5, 0, 1, 0)
     Title.TextXAlignment = Enum.TextXAlignment.Left
 
-    --// TOPBAR BUTTONS (Static Positioning)
-    -- Container anchored right to hold buttons
+    --// BUTTONS (Manual Right Anchoring)
     local ButtonContainer = Instance.new("Frame")
     ButtonContainer.Parent = Topbar
     ButtonContainer.BackgroundTransparency = 1
     ButtonContainer.AnchorPoint = Vector2.new(1, 0)
-    ButtonContainer.Position = UDim2.new(1, -15, 0, 0)
-    ButtonContainer.Size = UDim2.new(0, 160, 1, 0)
+    ButtonContainer.Position = UDim2.new(1, -15, 0, 0) -- 15px Padding from Right Edge
+    ButtonContainer.Size = UDim2.new(0, 150, 1, 0)
 
     local function CreateTopBtn(Name, Icon, OffsetX, Callback)
         local Btn = Instance.new("ImageButton")
@@ -139,7 +142,7 @@ function Library:CreateWindow(Settings)
         Btn.Image = Icon
         Btn.ImageColor3 = Color3.fromRGB(150, 150, 150)
         Btn.Size = UDim2.new(0, 20, 0, 20)
-        -- Strict positioning from the right side of the container
+        -- Hardcoded offsets ensure they NEVER overlap or glitch
         Btn.Position = UDim2.new(1, OffsetX, 0.5, -10) 
         
         Btn.MouseEnter:Connect(function() Tween(Btn, {ImageColor3 = Color3.new(1,1,1)}) end)
@@ -147,9 +150,9 @@ function Library:CreateWindow(Settings)
         Btn.MouseButton1Click:Connect(Callback)
     end
 
-    -- 1. Close (Rightmost)
+    -- 1. Close Button (Far Right)
     CreateTopBtn("Close", Icons.Close, -25, function()
-        -- Termination Modal
+        -- Termination Warning Modal
         local Overlay = Instance.new("TextButton")
         Overlay.Name = "Blocker"
         Overlay.Parent = ScreenGui
@@ -203,7 +206,7 @@ function Library:CreateWindow(Settings)
         No.MouseButton1Click:Connect(function() Overlay:Destroy() end)
     end)
 
-    -- 2. Minimize
+    -- 2. Minimize Button
     CreateTopBtn("Min", Icons.Minimize, -60, function()
         Minimized = not Minimized
         if Minimized then
@@ -213,25 +216,19 @@ function Library:CreateWindow(Settings)
         end
     end)
 
-    -- 3. Settings (Your Icon)
+    -- 3. Settings Button (Using your Custom Asset)
     CreateTopBtn("Settings", Icons.Settings, -95, function()
         SettingsOpen = not SettingsOpen
+        -- Keybind Changer Overlay
         local SetFrame = Main:FindFirstChild("SettingsOverlay")
         if not SetFrame then
-            -- Create Settings Overlay if it doesn't exist
             SetFrame = Instance.new("Frame")
             SetFrame.Name = "SettingsOverlay"
             SetFrame.Parent = Main
             SetFrame.BackgroundColor3 = Theme.Background
             SetFrame.Size = UDim2.new(1, 0, 1, -50)
-            SetFrame.Position = UDim2.new(0, 0, 1, 0)
+            SetFrame.Position = UDim2.new(0, 0, 1, 0) -- Hidden initially
             SetFrame.ZIndex = 5
-            
-            local SLabel = Instance.new("TextLabel")
-            SLabel.Parent = SetFrame; SLabel.BackgroundTransparency = 1
-            SLabel.Text = "Settings / Keybinds"; SLabel.Font = Enum.Font.GothamBold
-            SLabel.TextColor3 = Theme.TextColor; SLabel.TextSize = 16
-            SLabel.Position = UDim2.new(0, 0, 0, 20); SLabel.Size = UDim2.new(1, 0, 0, 30)
             
             local KeyBtn = Instance.new("TextButton")
             KeyBtn.Parent = SetFrame
@@ -258,25 +255,25 @@ function Library:CreateWindow(Settings)
         end
         
         if SettingsOpen then
-            Tween(SetFrame, {Position = UDim2.new(0,0,0,50)})
+            Tween(SetFrame, {Position = UDim2.new(0,0,0,50)}) -- Slide Up
         else
-            Tween(SetFrame, {Position = UDim2.new(0,0,1,0)})
+            Tween(SetFrame, {Position = UDim2.new(0,0,1,0)}) -- Slide Down
         end
     end)
 
-    -- 4. Search
+    -- 4. Search Button (Placeholder)
     CreateTopBtn("Search", Icons.Search, -130, function()
-        Library:Notify({Title="Search", Content="Feature not implemented.", Duration=1})
+        Library:Notify({Title="Search", Content="No options found.", Duration=1})
     end)
 
-    --// TOGGLE VISIBILITY
+    --// TOGGLE UI LOGIC
     UserInputService.InputBegan:Connect(function(Input, Processed)
         if not Processed and Input.KeyCode == UIKeybind then
             Main.Visible = not Main.Visible
         end
     end)
 
-    --// TABS (Rayfield Horizontal)
+    --// TABS (Horizontal Layout)
     local TabContainer = Instance.new("Frame")
     TabContainer.Parent = Main
     TabContainer.BackgroundColor3 = Theme.Background
@@ -297,7 +294,7 @@ function Library:CreateWindow(Settings)
     ContentContainer.Size = UDim2.new(1, 0, 1, -100)
     ContentContainer.ClipsDescendants = true
 
-    --// NOTIFICATIONS
+    --// NOTIFICATIONS (2 Seconds)
     local NotifHolder = Instance.new("Frame")
     NotifHolder.Parent = ScreenGui
     NotifHolder.BackgroundTransparency = 1
